@@ -1,0 +1,45 @@
+name: Docker Image CI
+
+on:
+#  Файл будет запускаться на push
+  push:
+#    При push в main. Когда мы закрываем pull request
+#    Т.е. когда у нас в main что-то вставляется, мы будем выполнять этот workflow (событие)
+    branches: ["main"]
+
+# Указываем джобы, которые будут выполнены
+jobs:
+  build:
+#    Указываем конфигурацию
+#    На ubuntu последней версии выполняем следующие шаги
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+#        Во время шага Checkout мы будем использовать actions/checkout@v3
+        uses: actions/checkout@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+#        Передаем креды, которые нам нужны
+        with:
+#          Обращение к переменной внутри репозитория
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+#          Почему не PASSWORD? Чтобы не зависеть от пароля. Если мы поменяем пароль, у нас все равно
+#          будет работать то, что мы set-али до этого
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and Push to Docker Hub
+        with:
+#          Image называется по тому, куда мы загружаем
+          image: ${{ secrets.DOCKERHUB_USERNAME }}/data-analyzer-microservice
+#          Обращаемся к переменной, которая есть у GitHub, чтобы нас автоматически
+#  инкрементировать версию нашего Image
+#          Т.е. когда мы сделаем релиз 1.0 дальше будет продолжаться счетчик
+#          latest - чтобы счетчик обновлялся, когда мы что-то новое загружаем
+          tags: 0.0.$GITHUB_RUN_NUMBER, latest
+#          dockerfile находится в корне Dockerfile
+          dockerfile: Dockerfile
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
